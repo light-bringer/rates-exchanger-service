@@ -1,24 +1,43 @@
 package sync
 
-import "encoding/xml"
-
-type XMLExchangeRate struct {
-	XMLName xml.Name   `xml:"Envelope"`
-	Cube    CubeStruct `xml:"http://www.ecb.int/vocabulary/2002-08-01/eurofxref Cube"`
-}
-
-type CubeStruct struct {
-	Time        string `xml:"time,attr"`
-	CubeContent []Cube `xml:"Cube"`
-}
-
-type Cube struct {
-	Currency string  `xml:"currency,attr"`
-	Rate     float64 `xml:"rate,attr"`
-	Time     string  `xml:"time,attr"`
-}
-
-type (
-	ExchangeRate  Cube
-	ExchangeRates []ExchangeRate
+import (
+	"encoding/xml"
+	"time"
 )
+
+// Define the structs to match the updated XML structure
+
+type Envelope struct {
+	XMLName xml.Name       `xml:"Envelope"`
+	Subject string         `xml:"subject"`
+	Sender  Sender         `xml:"Sender"`
+	Cube    StructuredCube `xml:"Cube"`
+}
+
+type Sender struct {
+	Name string `xml:"name"`
+}
+
+// StructuredCube is the parent cube element containing date-specific cubes.
+type StructuredCube struct {
+	Cubes []DateCube `xml:"Cube"`
+}
+
+// DateCube represents a cube with a specific date, containing multiple currency rate entries.
+type DateCube struct {
+	Time    string      `xml:"time,attr"`
+	Entries []RateEntry `xml:"Cube"`
+}
+
+type RateEntry struct {
+	Currency string `xml:"currency,attr"`
+	Rate     string `xml:"rate,attr"`
+}
+
+type ExchangeRate struct {
+	Currency string
+	Rate     float64
+	Time     time.Time
+}
+
+type ExchangeRates []ExchangeRate

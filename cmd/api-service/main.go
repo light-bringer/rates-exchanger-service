@@ -36,7 +36,7 @@ func main() {
 		log.Fatal("Error connecting to the database", err)
 	}
 	defer dbConn.Close()
-	syncService := sync.NewExchangeRateSync(SyncURL, dbConn)
+	syncService := sync.NewExchangeRateSync("rate_api", SyncURL, dbConn)
 
 	cron.PeriodicJob(syncService.Sync, SyncInterval)
 	cleanSvc := func() {

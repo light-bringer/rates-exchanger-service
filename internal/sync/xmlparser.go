@@ -3,27 +3,37 @@ package sync
 import (
 	"context"
 	"encoding/xml"
+	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
+	"github.com/segmentio/ksuid"
 )
 
 type ExchangeRateSync struct {
 	httpClient *http.Client
 	url        string
+	schema     string
+	tableName  string
 	db         *pgxpool.Pool
 }
 
-func NewExchangeRateSync(url string, db *pgxpool.Pool) *ExchangeRateSync {
+func NewExchangeRateSync(schemaName, url string, db *pgxpool.Pool) *ExchangeRateSync {
+	if schemaName == "" {
+		schemaName = "public"
+	}
 	return &ExchangeRateSync{
 		httpClient: http.DefaultClient,
 		url:        url,
 		db:         db,
+		schema:     schemaName,
+		tableName:  schemaName + ".exchange_rates",
 	}
 }
 
@@ -36,26 +46,39 @@ func (e *ExchangeRateSync) loadHTTPData() (ExchangeRates, error) {
 	}
 
 	resp, err := e.httpClient.Do(req)
-	if err != nil {
+	if err != nil || resp.StatusCode != http.StatusOK {
 		slog.Error("Error getting exchange rates", err)
 		return ExchangeRates{}, errors.Wrap(err, "error getting exchange rates")
 	}
 
 	defer resp.Body.Close()
+	var envelope Envelope
 
-	var data XMLExchangeRate
-	if xmlErr := xml.NewDecoder(resp.Body).Decode(&data); xmlErr != nil {
-		slog.Error("Error decoding exchange rates", xmlErr)
-		return ExchangeRates{}, errors.Wrap(err, "error decoding exchange rates")
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		slog.Error("Error reading response body", err)
+		return ExchangeRates{}, errors.Wrap(err, "error reading response body")
+	}
+	if xmlErr := xml.Unmarshal(body, &envelope); xmlErr != nil {
+		return ExchangeRates{}, errors.Wrap(xmlErr, "error unmarshalling response body")
 	}
 
-	slog.Info("Exchange rates loaded successfully", "data", data.Cube.CubeContent)
-	res := make(ExchangeRates, 0, len(data.Cube.CubeContent))
-	for _, cube := range data.Cube.CubeContent {
-		res = append(res, ExchangeRate(cube))
+	slog.Info("Exchange rates loaded successfully", "count", len(envelope.Cube.Cubes))
+
+	res := make(ExchangeRates, 0, len(envelope.Cube.Cubes))
+	for _, cube := range envelope.Cube.Cubes {
+		cubeTime, _ := time.Parse("2006-01-02", cube.Time)
+		for _, entry := range cube.Entries {
+			rate, _ := strconv.ParseFloat(entry.Rate, 64)
+			res = append(res, ExchangeRate{
+				Currency: entry.Currency,
+				Rate:     rate,
+				Time:     cubeTime,
+			})
+		}
 	}
 
-	slog.Info("Exchange rates parsed successfully")
+	slog.Info("Exchange rates parsed successfully", "count", len(res), "rates", res[:5])
 	return res, nil
 }
 
@@ -83,7 +106,7 @@ func (e *ExchangeRateSync) insertToDB(exchangeRates ExchangeRates) error {
 		}
 	}()
 
-	insertQueryBuilder := sq.Insert("exchange_rates").Columns("currency", "rate", "time")
+	insertQueryBuilder := sq.Insert(e.tableName).Columns("id", "currency", "rate", "date")
 
 	batchSize := 1000
 	for idx := 0; idx < len(exchangeRates); idx += batchSize {
@@ -98,7 +121,7 @@ func (e *ExchangeRateSync) insertToDB(exchangeRates ExchangeRates) error {
 		}
 
 		// Reset insertQueryBuilder for the next batch
-		insertQueryBuilder = squirrel.Insert("exchange_rates").Columns("currency", "rate", "time")
+		insertQueryBuilder = sq.Insert(e.tableName).Columns("id", "currency", "rate", "date")
 	}
 
 	slog.Info("Exchange rates inserted successfully")
@@ -112,19 +135,22 @@ func (e *ExchangeRateSync) insertBatchToDB(
 	batchRates ExchangeRates,
 ) error {
 	for _, rate := range batchRates {
-		insertQueryBuilder = insertQueryBuilder.Values(rate.Currency, rate.Rate, rate.Time)
+		id := ksuid.New().String()
+		insertQueryBuilder = insertQueryBuilder.Values(id, rate.Currency, rate.Rate, rate.Time)
 	}
 
-	insertQueryBuilder.Suffix("ON DUPLICATE KEY UPDATE currency = currency")
-
+	insertQueryBuilder.Suffix(`ON CONFLICT (currency, date) DO UPDATE SET rate = EXCLUDED.rate`)
 	query, args, queryErr := insertQueryBuilder.ToSql()
-	slog.Info("Insert query", "query", query, "args", args)
+
+	slog.Debug("Insert query", "query", query, "args", args)
+
 	if queryErr != nil {
 		return errors.Wrap(queryErr, "error building insert query")
 	}
 
 	res, execErr := tx.Exec(context.Background(), query, args...)
 	if execErr != nil {
+		slog.Error("Error inserting exchange rates", execErr)
 		return errors.Wrap(execErr, "error inserting exchange rates")
 	}
 
@@ -154,7 +180,7 @@ func (e *ExchangeRateSync) deleteOldRates(days int) error {
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	threshold := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
-	deleteBuilder := sq.Delete("exchange_rates").Where(squirrel.Lt{"time": threshold})
+	deleteBuilder := sq.Delete(e.tableName).Where(squirrel.Gt{"date": threshold})
 
 	query, args, queryErr := deleteBuilder.ToSql()
 	if queryErr != nil {

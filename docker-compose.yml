@@ -1,25 +1,25 @@
 version: '3'
 services:
-  rates-api:
-    build: .
-    ports:
-      - "8080:8080"
-    volumes:
-      - .:/app
-    depends_on:
-      - postgres
-    environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=yourusername
-      - POSTGRES_PASSWORD=yourpassword
-      - POSTGRES_DB=ratesdb
+  # rates-api:
+  #   build: .
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #     - .:/app
+  #   depends_on:
+  #     - postgres
+  #   environment:
+  #     - POSTGRES_HOST=postgres
+  #     - POSTGRES_PORT=5432
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  #     - POSTGRES_DB=ratesdb
 
   postgres:
     image: postgres:latest
     environment:
-      - POSTGRES_USER=yourusername
-      - POSTGRES_PASSWORD=yourpassword
-      - POSTGRES_DB=ratesdb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
     ports:
       - "5432:5432"

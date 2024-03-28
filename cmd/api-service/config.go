@@ -1,10 +1,11 @@
-package api_service
+package main
 
-// config := struct {
-// Message string `conf:"msg" help:"The message to print out."`
-// }{
-// Message: "default",
-// }
-// conf.Load(&config)
+import "time"
 
-// struct
+const (
+	SyncURL        = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml"
+	SyncInterval   = 5 * time.Second
+	DeleteInterval = 1 * time.Minute
+	ServerTimeout  = 15 * time.Second
+	DeletionDays   = 30
+)

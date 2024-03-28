@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -45,9 +44,9 @@ func BuildPGXConnPool(pgConf PostgresConfig) (*pgxpool.Pool, error) {
 	}
 	slog.Info("Connected to postgres")
 
-	if !checkIfTableExistsInDatabase(connPool) {
-		return nil, errors.New("table does not exist in database, please re-run migration again")
-	}
+	// if !checkIfTableExistsInDatabase(connPool) {
+	// 	return nil, errors.New("table does not exist in database, please re-run migration again")
+	// }
 
 	return connPool, nil
 }
@@ -66,6 +65,8 @@ func checkIfTableExistsInDatabase(db *pgxpool.Pool) bool {
 		slog.Error("Unable to build SQL query", "error", err)
 		return false
 	}
+
+	slog.Info("Checking if table exists", "sql", sql, "args", args)
 
 	results, err := db.Query(context.Background(), sql, args)
 	if err != nil {

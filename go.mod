@@ -1,4 +1,4 @@
-module rate-exchanger
+module github.com/light-bringer/rates-exchanger-service
 
 go 1.22
 
@@ -7,6 +7,7 @@ require (
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/lib/pq v1.10.9
+	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 )
 

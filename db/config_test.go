@@ -19,7 +19,6 @@ func TestPostgresConfigValidate(t *testing.T) {
 			MinConnections: 1,
 			SchemaName:     "rate_api",
 		}).Validate())
-
 	})
 
 	t.Run("invalid config", func(t *testing.T) {

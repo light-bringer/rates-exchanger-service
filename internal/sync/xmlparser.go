@@ -12,8 +12,8 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/light-bringer/rates-exchanger-service/models"
 	"github.com/pkg/errors"
-	"github.com/segmentio/ksuid"
 )
 
 type ExchangeRateSync struct {
@@ -38,39 +38,39 @@ func NewExchangeRateSync(schemaName, url string, db *pgxpool.Pool) *ExchangeRate
 }
 
 // loadHTTPData loads the exchange rates from the given URL.
-func (e *ExchangeRateSync) loadHTTPData() (ExchangeRates, error) {
+func (e *ExchangeRateSync) loadHTTPData() (models.ExchangeRates, error) {
 	req, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet, e.url, nil)
 	if reqErr != nil {
 		slog.Error("Error creating request", reqErr)
-		return ExchangeRates{}, errors.Wrap(reqErr, "error creating request")
+		return models.ExchangeRates{}, errors.Wrap(reqErr, "error creating request")
 	}
 
 	resp, err := e.httpClient.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		slog.Error("Error getting exchange rates", err)
-		return ExchangeRates{}, errors.Wrap(err, "error getting exchange rates")
+		return models.ExchangeRates{}, errors.Wrap(err, "error getting exchange rates")
 	}
 
 	defer resp.Body.Close()
-	var envelope Envelope
+	var envelope models.Envelope
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		slog.Error("Error reading response body", err)
-		return ExchangeRates{}, errors.Wrap(err, "error reading response body")
+		return models.ExchangeRates{}, errors.Wrap(err, "error reading response body")
 	}
 	if xmlErr := xml.Unmarshal(body, &envelope); xmlErr != nil {
-		return ExchangeRates{}, errors.Wrap(xmlErr, "error unmarshalling response body")
+		return models.ExchangeRates{}, errors.Wrap(xmlErr, "error unmarshalling response body")
 	}
 
 	slog.Info("Exchange rates loaded successfully", "count", len(envelope.Cube.Cubes))
 
-	res := make(ExchangeRates, 0, len(envelope.Cube.Cubes))
+	res := make(models.ExchangeRates, 0, len(envelope.Cube.Cubes))
 	for _, cube := range envelope.Cube.Cubes {
 		cubeTime, _ := time.Parse("2006-01-02", cube.Time)
 		for _, entry := range cube.Entries {
 			rate, _ := strconv.ParseFloat(entry.Rate, 64)
-			res = append(res, ExchangeRate{
+			res = append(res, models.ExchangeRate{
 				Currency: entry.Currency,
 				Rate:     rate,
 				Time:     cubeTime,
@@ -83,7 +83,7 @@ func (e *ExchangeRateSync) loadHTTPData() (ExchangeRates, error) {
 }
 
 // insertToDB inserts the exchange rates into the database using a transaction and batch inserts.
-func (e *ExchangeRateSync) insertToDB(exchangeRates ExchangeRates) error {
+func (e *ExchangeRateSync) insertToDB(exchangeRates models.ExchangeRates) error {
 	ctx := context.Background()
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 	tx, err := e.db.Begin(ctx)
@@ -106,7 +106,7 @@ func (e *ExchangeRateSync) insertToDB(exchangeRates ExchangeRates) error {
 		}
 	}()
 
-	insertQueryBuilder := sq.Insert(e.tableName).Columns("id", "currency", "rate", "date")
+	insertQueryBuilder := sq.Insert(e.tableName).Columns("currency", "rate", "day")
 
 	batchSize := 1000
 	for idx := 0; idx < len(exchangeRates); idx += batchSize {
@@ -121,7 +121,7 @@ func (e *ExchangeRateSync) insertToDB(exchangeRates ExchangeRates) error {
 		}
 
 		// Reset insertQueryBuilder for the next batch
-		insertQueryBuilder = sq.Insert(e.tableName).Columns("id", "currency", "rate", "date")
+		insertQueryBuilder = sq.Insert(e.tableName).Columns("currency", "rate", "day")
 	}
 
 	slog.Info("Exchange rates inserted successfully")
@@ -132,19 +132,15 @@ func (e *ExchangeRateSync) insertToDB(exchangeRates ExchangeRates) error {
 func (e *ExchangeRateSync) insertBatchToDB(
 	tx pgx.Tx,
 	insertQueryBuilder squirrel.InsertBuilder,
-	batchRates ExchangeRates,
+	batchRates models.ExchangeRates,
 ) error {
 	for _, rate := range batchRates {
-		id := ksuid.New().String()
-		insertQueryBuilder = insertQueryBuilder.Values(id, rate.Currency, rate.Rate, rate.Time)
+		insertQueryBuilder = insertQueryBuilder.Values(rate.Currency, rate.Rate, rate.Time)
 	}
-
-	insertQueryBuilder.Suffix(`ON CONFLICT (currency, date) DO UPDATE SET rate = EXCLUDED.rate`)
+	insertQueryBuilder = insertQueryBuilder.Suffix(`ON CONFLICT (day, currency) DO UPDATE SET rate = EXCLUDED.rate`)
 	query, args, queryErr := insertQueryBuilder.ToSql()
-
-	slog.Debug("Insert query", "query", query, "args", args)
-
 	if queryErr != nil {
+		slog.Error("Error building insert query", queryErr)
 		return errors.Wrap(queryErr, "error building insert query")
 	}
 
@@ -180,7 +176,7 @@ func (e *ExchangeRateSync) deleteOldRates(days int) error {
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	threshold := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
-	deleteBuilder := sq.Delete(e.tableName).Where(squirrel.Gt{"date": threshold})
+	deleteBuilder := sq.Delete(e.tableName).Where(squirrel.Gt{"day": threshold})
 
 	query, args, queryErr := deleteBuilder.ToSql()
 	if queryErr != nil {

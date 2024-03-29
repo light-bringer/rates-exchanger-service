@@ -4,7 +4,7 @@ import "time"
 
 const (
 	SyncURL        = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml"
-	SyncInterval   = 5 * time.Second
+	SyncInterval   = 5 * time.Minute
 	DeleteInterval = 1 * time.Minute
 	ServerTimeout  = 15 * time.Second
 	DeletionDays   = 30

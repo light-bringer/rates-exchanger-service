@@ -6,19 +6,9 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
-	"github.com/light-bringer/rates-exchanger-service/internal/service"
 )
 
 // Handler represents an HTTP handler for exchange rates.
-type Handler struct {
-	service *service.RatesService
-}
-
-// NewHandler returns a new Handler with the given RatesService.
-func NewHandler(service *service.RatesService) *Handler {
-	return &Handler{service: service}
-}
 
 // GetLatestRates handles requests for the latest exchange rates.
 func (h *Handler) GetLatestRates(w http.ResponseWriter, r *http.Request) {
@@ -42,11 +32,11 @@ func (h *Handler) GetLatestRates(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]interface{}{
-		"base":  "EUR",
+		"base":  baseCurrency,
 		"rates": rates,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentTypeHeader, contentType)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -88,11 +78,11 @@ func (h *Handler) GetExchangeRate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]interface{}{
-		"base":  "EUR",
+		"base":  baseCurrency,
 		"rates": rates,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentTypeHeader, contentType)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -100,7 +90,7 @@ func (h *Handler) GetExchangeRate(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetStatistics(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("logging statistics for exchange rates", "request", r.Header)
 
-	days := uint64(30)
+	days := uint64(defaultRange)
 	var err error
 	dayStr := r.URL.Query().Get("range")
 	if dayStr != "" {
@@ -129,11 +119,11 @@ func (h *Handler) GetStatistics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]interface{}{
-		"base":          "EUR",
+		"base":          baseCurrency,
 		"rates_analyze": detailedStats,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentTypeHeader, contentType)
 	json.NewEncoder(w).Encode(response)
 }
 

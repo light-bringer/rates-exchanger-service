@@ -3,12 +3,13 @@ package db
 import (
 	"testing"
 
+	"github.com/light-bringer/rates-exchanger-service/models"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPostgresConfigValidate(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
-		assert.True(t, (&PostgresConfig{
+		assert.True(t, (&models.PostgresConfig{
 			Host:           "localhost",
 			Username:       "user",
 			Password:       "password",
@@ -23,7 +24,7 @@ func TestPostgresConfigValidate(t *testing.T) {
 
 	t.Run("invalid config", func(t *testing.T) {
 		// Create a new instance of PostgresConfig
-		pc := &PostgresConfig{}
+		pc := &models.PostgresConfig{}
 
 		// Call the Validate method
 		valid := pc.Validate()
@@ -35,7 +36,7 @@ func TestPostgresConfigValidate(t *testing.T) {
 
 func TestNewPostgresConfig(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
-		params := PostgresConfigParams{
+		params := models.PostgresConfigParams{
 			Host:           "localhost",
 			Username:       "user",
 			Password:       "password",
@@ -53,7 +54,7 @@ func TestNewPostgresConfig(t *testing.T) {
 	})
 
 	t.Run("invalid config", func(t *testing.T) {
-		params := PostgresConfigParams{}
+		params := models.PostgresConfigParams{}
 
 		cfg := NewPostgresConfig(params)
 
@@ -61,7 +62,7 @@ func TestNewPostgresConfig(t *testing.T) {
 	})
 
 	t.Run("missing config", func(t *testing.T) {
-		params := PostgresConfigParams{
+		params := models.PostgresConfigParams{
 			Host:           "localhost",
 			Username:       "user",
 			Password:       "password",

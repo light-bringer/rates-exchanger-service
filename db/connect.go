@@ -9,6 +9,7 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq" // pgx driver
+	"github.com/light-bringer/rates-exchanger-service/models"
 	"github.com/pkg/errors"
 )
 
@@ -19,7 +20,7 @@ const (
 )
 
 // BuildPGXConnPool returns a new pgx connection pool.
-func BuildPGXConnPool(ctx context.Context, pgConf PostgresConfig) (*pgxpool.Pool, error) {
+func BuildPGXConnPool(ctx context.Context, pgConf models.PostgresConfig) (*pgxpool.Pool, error) {
 	sqlAddr := buildPostgresConnString(pgConf)
 	connConfig, err := pgxpool.ParseConfig(sqlAddr)
 	if err != nil {
@@ -89,7 +90,7 @@ func checkIfTableExistsInDatabase(db *pgxpool.Pool) bool {
 }
 
 // buildPostgresConnString returns a postgres connection string.
-func buildPostgresConnString(pgConf PostgresConfig) string {
+func buildPostgresConnString(pgConf models.PostgresConfig) string {
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		pgConf.Host,
 		pgConf.Port,

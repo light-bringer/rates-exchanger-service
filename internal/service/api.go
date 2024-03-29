@@ -76,7 +76,10 @@ func (s *RatesService) FetchLatestExchangeRates(limit uint64) (models.LatestExch
 // The function returns the exchange rates for the given date.
 // The rates are sorted in ascending order.
 // The function returns an error if the query fails.
-func (s *RatesService) FetchRatesForDate(date string, limit uint64) (models.LatestExchangeRates, error) {
+func (s *RatesService) FetchRatesForDate(
+	date string,
+	limit uint64,
+) (models.LatestExchangeRates, error) {
 	psql := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	_, err := time.Parse("2006-01-02", date)

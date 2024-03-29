@@ -16,10 +16,11 @@ import (
 	"github.com/light-bringer/rates-exchanger-service/internal/handler"
 	"github.com/light-bringer/rates-exchanger-service/internal/service"
 	"github.com/light-bringer/rates-exchanger-service/internal/sync"
+	"github.com/light-bringer/rates-exchanger-service/models"
 )
 
 func main() {
-	dbParams := db.PostgresConfigParams{
+	dbParams := models.PostgresConfigParams{
 		Host:           "localhost",
 		Port:           5432,
 		Username:       "postgres",
@@ -40,7 +41,9 @@ func main() {
 	dbConfig := db.NewPostgresConfig(dbParams)
 
 	if dbConfig == nil {
-		log.Fatal("Invalid database configuration")
+		slog.Error("Error creating the database configuration")
+		ctx.Done()
+		return
 	}
 
 	dbConn, err := db.BuildPGXConnPool(context.Background(), *dbConfig)
@@ -90,5 +93,5 @@ func main() {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
-	slog.Info("Server exited properly")
+	slog.Info("Server exited gracefully!")
 }

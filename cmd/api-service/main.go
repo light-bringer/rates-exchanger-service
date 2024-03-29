@@ -7,6 +7,8 @@ import (
 
 	"github.com/light-bringer/rates-exchanger-service/cron"
 	"github.com/light-bringer/rates-exchanger-service/db"
+	"github.com/light-bringer/rates-exchanger-service/internal/handler"
+	"github.com/light-bringer/rates-exchanger-service/internal/service"
 	"github.com/light-bringer/rates-exchanger-service/internal/sync"
 )
 
@@ -38,15 +40,17 @@ func main() {
 	defer dbConn.Close()
 	syncService := sync.NewExchangeRateSync("rate_api", SyncURL, dbConn)
 
-	cron.PeriodicJob(syncService.Sync, SyncInterval)
+	go cron.PeriodicJob(syncService.Sync, SyncInterval)
 	cleanSvc := func() {
 		syncService.Cleanup(DeletionDays)
 	}
-	cron.PeriodicJob(cleanSvc, DeleteInterval)
+	go cron.PeriodicJob(cleanSvc, DeleteInterval)
+	ratesService := service.NewRatesService(dbConn, "rate_api")
+	ratesHandler := handler.NewHandler(ratesService)
 
 	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      nil,
+		Handler:      ratesHandler.Routes(),
 		ReadTimeout:  ServerTimeout,
 		WriteTimeout: ServerTimeout,
 	}

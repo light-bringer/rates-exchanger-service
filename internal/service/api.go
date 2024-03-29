@@ -76,7 +76,7 @@ func (s *RatesService) FetchLatestExchangeRates(limit uint64) (models.LatestExch
 // The function returns the exchange rates for the given date.
 // The rates are sorted in ascending order.
 // The function returns an error if the query fails.
-func (s *RatesService) FetchRatesForDate(date string, limit int) (models.LatestExchangeRates, error) {
+func (s *RatesService) FetchRatesForDate(date string, limit uint64) (models.LatestExchangeRates, error) {
 	psql := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	_, err := time.Parse("2006-01-02", date)
@@ -88,7 +88,7 @@ func (s *RatesService) FetchRatesForDate(date string, limit int) (models.LatestE
 	selectBuilder := psql.Select("currency", "rate").From(s.tableName).Where(squirrel.Eq{"day": date}).OrderBy("currency ASC")
 
 	if limit > 0 {
-		selectBuilder = selectBuilder.Limit(uint64(limit))
+		selectBuilder = selectBuilder.Limit(limit)
 	}
 
 	sqlStr, args, err := selectBuilder.ToSql()
@@ -135,7 +135,7 @@ func (s *RatesService) FetchRatesForDate(date string, limit int) (models.LatestE
 // The statistics include min, max, and average rates for each currency.
 // The statistics are calculated based on the rates for the latest day.
 // The function returns a map of currency to rate statistics.
-func (s *RatesService) GetRateStatistics() (models.RateStatisticsMap, error) {
+func (s *RatesService) GetRateStatistics(days uint64) (models.RateStatisticsMap, error) {
 	/**
 	SELECT
 	    currency,
@@ -155,17 +155,20 @@ func (s *RatesService) GetRateStatistics() (models.RateStatisticsMap, error) {
 	subQuery := psql.Select("MAX(day)").From(s.tableName)
 	subQueryStr, _, _ := subQuery.ToSql()
 
+	whereClause := fmt.Sprintf("day <= (%s) AND day >= (%s) - INTERVAL '%d days'", subQueryStr, subQueryStr, days)
+
 	query := psql.Select(
 		"currency",
 		"MIN(rate) AS min_rate",
 		"MAX(rate) AS max_rate",
 		"AVG(rate) AS avg_rate",
 	).From("rate_api.exchange_rates").
-		Where("day = (" + subQueryStr + ")").
+		Where(whereClause).
 		GroupBy("currency").
 		OrderBy("currency")
 
 	sqlStr, args, err := query.ToSql()
+	slog.Info("SQL query", "sql", sqlStr, "args", args)
 	if err != nil {
 		slog.Error("Failed to build SQL query", "error", err)
 		return nil, errors.Wrap(err, "failed to build SQL query")

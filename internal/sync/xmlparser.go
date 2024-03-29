@@ -176,7 +176,7 @@ func (e *ExchangeRateSync) deleteOldRates(days int) error {
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	threshold := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
-	deleteBuilder := sq.Delete(e.tableName).Where(squirrel.Gt{"day": threshold})
+	deleteBuilder := sq.Delete(e.tableName).Where(squirrel.Lt{"day": threshold})
 
 	query, args, queryErr := deleteBuilder.ToSql()
 	if queryErr != nil {

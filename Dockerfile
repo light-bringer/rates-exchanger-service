@@ -5,7 +5,8 @@ FROM golang:alpine AS builder
 ENV GO111MODULE=on \
     CGO_ENABLED=0 \
     GOOS=linux \
-    GOARCH=amd64
+    GOARCH=amd64 \
+    SERVICE_PATH=./cmd/api-service
 
 # Move to working directory /build
 WORKDIR /build
@@ -19,7 +20,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -o rates-api .
+RUN go build -o rates-api $SERVICE_PATH
 
 # Start a new stage from scratch
 FROM alpine:latest

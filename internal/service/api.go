@@ -179,6 +179,7 @@ func (s *RatesService) GetRateStatistics(days uint64) (models.RateStatisticsMap,
 		slog.Error("Failed to acquire connection", "error", err)
 		return nil, errors.Wrap(err, "failed to acquire connection")
 	}
+	defer conn.Release()
 
 	rows, err := conn.Query(context.Background(), sqlStr, args...)
 	if err != nil {

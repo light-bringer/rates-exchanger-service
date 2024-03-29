@@ -8,7 +8,8 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/lib/pq"
+	_ "github.com/lib/pq" // pgx driver
+	"github.com/pkg/errors"
 )
 
 const (
@@ -18,12 +19,12 @@ const (
 )
 
 // BuildPGXConnPool returns a new pgx connection pool.
-func BuildPGXConnPool(pgConf PostgresConfig) (*pgxpool.Pool, error) {
+func BuildPGXConnPool(ctx context.Context, pgConf PostgresConfig) (*pgxpool.Pool, error) {
 	sqlAddr := buildPostgresConnString(pgConf)
 	connConfig, err := pgxpool.ParseConfig(sqlAddr)
 	if err != nil {
 		slog.Error("Error parsing connection string")
-		return nil, err
+		return nil, errors.Wrap(err, "error parsing connection string")
 	}
 
 	connConfig.MaxConns = int32(pgConf.MaxConnections)
@@ -32,21 +33,21 @@ func BuildPGXConnPool(pgConf PostgresConfig) (*pgxpool.Pool, error) {
 	connConfig.MaxConnIdleTime = pgxMaxConnIdleTime
 	connConfig.HealthCheckPeriod = pgxHealthCheckPeriod
 
-	connPool, err := pgxpool.NewWithConfig(context.Background(), connConfig)
+	connPool, err := pgxpool.NewWithConfig(ctx, connConfig)
 	if err != nil {
 		slog.Error("Error creating connection pool", "err", err)
-		return nil, err
+		return nil, errors.Wrap(err, "error creating connection pool")
 	}
 
-	if _, err = connPool.Exec(context.Background(), "SELECT 1"); err != nil {
+	if _, err = connPool.Exec(ctx, "SELECT 1"); err != nil {
 		slog.Error("Failed to ping database", "err", err)
-		return nil, err
+		return nil, errors.Wrap(err, "failed to ping database")
 	}
 	slog.Info("Connected to postgres")
 
-	// if !checkIfTableExistsInDatabase(connPool) {
-	// 	return nil, errors.New("table does not exist in database, please re-run migration again")
-	// }
+	if !checkIfTableExistsInDatabase(connPool) {
+		return nil, errors.New("table does not exist in database, please re-run migration again")
+	}
 
 	return connPool, nil
 }
@@ -68,14 +69,21 @@ func checkIfTableExistsInDatabase(db *pgxpool.Pool) bool {
 
 	slog.Info("Checking if table exists", "sql", sql, "args", args)
 
-	results, err := db.Query(context.Background(), sql, args)
+	results, err := db.Query(context.Background(), sql, args...)
 	if err != nil {
 		slog.Error("query execution error", "error", err)
+		return false
 	}
 
 	for results.Next() {
-		slog.Info("rows")
-		slog.Info("wow")
+		var tableName string
+		if err := results.Scan(&tableName); err != nil {
+			slog.Error("Failed to scan row", "error", err)
+			return false
+		}
+		if tableName != TableName {
+			return false
+		}
 	}
 	return true
 }

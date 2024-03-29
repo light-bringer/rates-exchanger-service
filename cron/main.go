@@ -1,6 +1,7 @@
 package cron
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -56,4 +57,19 @@ func PeriodicJob(task func(), interval time.Duration) {
 	// Wait for the goroutine to stop
 	time.Sleep(1 * time.Second)
 	slog.Info("Cron job stopped.")
+}
+
+func Periodically(ctx context.Context, task func(), interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done(): // Listen for context cancellation to gracefully stop the job
+			slog.Debug("Stopping cron job...")
+			return
+		case <-ticker.C:
+			task()
+		}
+	}
 }

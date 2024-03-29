@@ -15,5 +15,4 @@ type RateStatistic struct {
 type (
 	LatestExchangeRates []LatestExchangeRate
 	RateStatistics      []RateStatistic
-	RateStatisticsMap   map[string]RateStatistic
 )

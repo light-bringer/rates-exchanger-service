@@ -51,7 +51,7 @@ func (h *Handler) GetLatestRates(w http.ResponseWriter, r *http.Request) {
 }
 
 // HealthCheck handles requests for the health check.
-func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HealthCheck(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 

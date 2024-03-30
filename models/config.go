@@ -5,7 +5,7 @@ import "time"
 type StartupConfig struct {
 	Database struct {
 		Host           string  `yaml:"host"`
-		Port           int     `yaml:"port"`
+		Port           uint16  `yaml:"port"`
 		User           string  `yaml:"user"`
 		Pass           string  `yaml:"pass"`
 		Name           string  `yaml:"db"`
@@ -24,7 +24,7 @@ type StartupConfig struct {
 		Cleanup struct {
 			Enabled          bool          `yaml:"enabled"`
 			DeletionInterval time.Duration `yaml:"interval"`
-			MaxAge           time.Duration `yaml:"max_age"`
+			MaxAge           int           `yaml:"max_age"`
 		} `yaml:"cleanup"`
 	} `yaml:"cronjobs"`
 

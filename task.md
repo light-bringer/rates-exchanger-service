@@ -8,8 +8,8 @@ clarification.
 ### Mandatory
 1. You should complete the assignment within a week.
 2. Please ensure that you follow the best practice of Golang.
-3. Please don&#39;t use ORM frameworks.
-4. Please don&#39;t do DDD.
+3. Please don't use ORM frameworks.
+4. Please don't do DDD.
 5. Zip your code and send back to us. Do not publish your work publicly.
 6. Your code should be covered by tests.
 7. A README which explain how to run the code.

@@ -22,8 +22,8 @@ type PostgresConfig struct {
 	Port           uint16 `json:"port"            validate:"required"`
 	Database       string `json:"database"        validate:"required"`
 	SSLMode        string `json:"ssl_mode"        validate:"required"`
-	MaxConnections int    `json:"max_connections" validate:"required"`
-	MinConnections int    `json:"min_connections" validate:"required"`
+	MaxConnections uint32 `json:"max_connections" validate:"required"`
+	MinConnections uint32 `json:"min_connections" validate:"required"`
 	SchemaName     string `json:"schema_name"     validate:"required"`
 }
 
@@ -42,7 +42,7 @@ type PostgresConfigParams struct {
 	Port           uint16 `json:"port"`
 	Database       string `json:"database"`
 	SSLMode        string `json:"ssl_mode"`
-	MaxConnections int    `json:"max_connections"`
-	MinConnections int    `json:"min_connections"`
+	MaxConnections uint32 `json:"max_connections"`
+	MinConnections uint32 `json:"min_connections"`
 	SchemaName     string `json:"schema_name"`
 }

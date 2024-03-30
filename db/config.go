@@ -27,8 +27,8 @@ func NewPostgresConfig(params models.PostgresConfigParams) *models.PostgresConfi
 		Port:           params.Port,
 		Database:       params.Database,
 		SSLMode:        params.SSLMode,
-		MaxConnections: params.MaxConnections,
-		MinConnections: params.MinConnections,
+		MaxConnections: uint32(params.MaxConnections),
+		MinConnections: uint32(params.MinConnections),
 		SchemaName:     params.SchemaName,
 	}
 	if !cfg.Validate() {

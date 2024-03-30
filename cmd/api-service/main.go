@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/light-bringer/rates-exchanger-service/cron"
 	"github.com/light-bringer/rates-exchanger-service/db"
@@ -20,20 +19,36 @@ import (
 )
 
 func main() {
+	// read the configuration file
+	config, err := readConfig(configFile)
+	if err != nil {
+		log.Fatalf("Error reading the configuration file: %v", err)
+	}
+
+	// set the default values for the configuration
+	setDefaults(config)
+
 	dbParams := models.PostgresConfigParams{
-		Host:           "localhost",
-		Port:           5432,
-		Username:       "postgres",
-		Password:       "postgres",
-		Database:       "postgres",
-		SSLMode:        "disable",
-		MinConnections: 1,
-		MaxConnections: 10,
-		SchemaName:     "public",
+		Host:           config.Database.Host,
+		Port:           config.Database.Port,
+		Username:       config.Database.User,
+		Password:       config.Database.Pass,
+		Database:       config.Database.Name,
+		SSLMode:        string(config.Database.SSLMode),
+		MinConnections: config.Database.MinConnections,
+		MaxConnections: config.Database.MaxConnections,
+		SchemaName:     config.Database.Schema,
 	}
 
 	// Create a context that listens for termination signals
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(
+		context.Background(),
+		os.Kill,
+		os.Interrupt,
+		syscall.SIGTERM,
+		syscall.SIGABRT,
+		syscall.SIGQUIT,
+	)
 	defer cancel()
 
 	slog.Info("Starting the API service", "dbParams", dbParams)
@@ -51,18 +66,18 @@ func main() {
 		log.Fatal("Error connecting to the database", err)
 	}
 	defer dbConn.Close()
-	syncService := sync.NewExchangeRateSync("rate_api", SyncURL, dbConn)
+	syncService := sync.NewExchangeRateSync(config.Database.Schema, config.CronJobs.Rates.SyncURL, dbConn)
 
-	go cron.Periodically(ctx, syncService.Sync, SyncInterval)
+	go cron.Periodically(ctx, syncService.Sync, config.CronJobs.Rates.UpdateInterval)
 	cleanSvc := func() {
-		syncService.Cleanup(DeletionDays)
+		syncService.Cleanup(config.CronJobs.Cleanup.MaxAge)
 	}
-	go cron.Periodically(ctx, cleanSvc, DeleteInterval)
-	ratesService := service.NewRatesService(dbConn, "rate_api")
+	go cron.Periodically(ctx, cleanSvc, config.CronJobs.Cleanup.DeletionInterval)
+	ratesService := service.NewRatesService(dbConn, config.Database.Schema)
 	ratesHandler := handler.NewHandler(ratesService)
 
 	server := &http.Server{
-		Addr:         ":8080",
+		Addr:         fmt.Sprintf(":%d", config.HTTP.Port),
 		Handler:      ratesHandler.Routes(),
 		ReadTimeout:  ServerTimeout,
 		WriteTimeout: ServerTimeout,
@@ -85,7 +100,7 @@ func main() {
 	slog.Info("Received termination signal. Stopping cron job...")
 
 	// Create a deadline to wait for.
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 	defer cancel()
 
 	// Doesn't block if no connections, but will otherwise wait until the timeout deadline

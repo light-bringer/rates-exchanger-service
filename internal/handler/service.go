@@ -78,6 +78,7 @@ func (h *Handler) GetExchangeRate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]interface{}{
+		"date":  date,
 		"base":  baseCurrency,
 		"rates": rates,
 	}

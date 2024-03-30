@@ -72,12 +72,20 @@ func main() {
 	}
 	defer dbConn.Close()
 	syncService := sync.NewExchangeRateSync(config.Database.Schema, config.CronJobs.Rates.SyncURL, dbConn)
-
-	go cron.Periodically(ctx, syncService.Sync, config.CronJobs.Rates.UpdateInterval)
 	cleanSvc := func() {
 		syncService.Cleanup(config.CronJobs.Cleanup.MaxAge)
 	}
+	// Run the cleanup service once before starting the cron job
+	cleanSvc()
+
+	// Run the sync service once before starting the cron job
+	syncService.Sync()
+
+	// Start the cron jobs
+	go cron.Periodically(ctx, syncService.Sync, config.CronJobs.Rates.UpdateInterval)
 	go cron.Periodically(ctx, cleanSvc, config.CronJobs.Cleanup.DeletionInterval)
+
+	// Create a new rates service and handler
 	ratesService := service.NewRatesService(dbConn, config.Database.Schema)
 	ratesHandler := handler.NewHandler(ratesService)
 

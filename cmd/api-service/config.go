@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log/slog"
 	"os"
 	"time"
 
@@ -33,6 +34,8 @@ func readConfig(path string) (*models.StartupConfig, error) {
 	if err = yaml.Unmarshal(data, &config); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal config")
 	}
+
+	slog.Info("Config file read successfully", "path", path, "config", config)
 
 	return &config, nil
 }
@@ -103,5 +106,4 @@ func parseFlags() (string, error) {
 		return "", errors.New("dbhost flag is empty")
 	}
 	return *dbHost, nil
-
 }

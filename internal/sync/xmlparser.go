@@ -78,7 +78,7 @@ func (e *ExchangeRateSync) loadHTTPData() (models.ExchangeRates, error) {
 		}
 	}
 
-	slog.Info("Exchange rates parsed successfully", "count", len(res), "rates", res[:5])
+	slog.Info("Exchange rates parsed successfully", "count", len(res))
 	return res, nil
 }
 

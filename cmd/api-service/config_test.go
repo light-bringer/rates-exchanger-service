@@ -68,7 +68,6 @@ database:
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unmarshal config")
 		assert.Nil(t, config)
-
 	})
 }
 

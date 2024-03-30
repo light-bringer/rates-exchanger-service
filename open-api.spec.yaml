@@ -1,0 +1,157 @@
+openapi: "3.1.0"
+info:
+  title: Rates API
+  version: "1.0.0"
+servers:
+  - url: http://{base_url}
+    variables:
+      base_url:
+        default: "localhost:8080"
+        description: "This is the base URL for the Rates API"
+
+paths:
+  /rates/analyze:
+    get:
+      tags:
+        - Rates
+      summary: Analyze exchange rates
+      description: Returns analyzed statistics of exchange rates over a specified range of dates.
+      parameters:
+        - name: range
+          in: query
+          description: Range of days for back calculation from today.
+          schema:
+            type: integer
+            default: 30
+          required: false
+          example: 60
+      responses:
+        "200":
+          description: Analyzed rates data successfully returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyzedRatesResponse"
+
+  /rates/latest:
+    get:
+      tags:
+        - Rates
+      summary: Fetch the latest exchange rates
+      description: Returns the latest available exchange rates, with an optional limit on the number of returned rates.
+      parameters:
+        - name: limit
+          in: query
+          description: Limits the number of returned currencies to the specified number.
+          schema:
+            type: integer
+            default: 50
+          required: false
+          example: 100
+      responses:
+        "200":
+          description: Latest rates data successfully returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LatestRatesResponse"
+
+  /rates/{date}:
+    get:
+      tags:
+        - Rates
+      summary: Fetch rates by date
+      description: Returns the exchange rates for a provided specific date.
+      parameters:
+        - name: date
+          in: path
+          required: true
+          description: The date to find the rate for.
+          schema:
+            type: string
+            format: date
+            example: "2021-01-01"
+      responses:
+        "200":
+          description: Rates data for the specified date successfully returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoricalRateResponse"
+
+components:
+  schemas:
+    AnalyzeResponseData:
+      type: object
+      properties:
+        average:
+          type: number
+          format: double
+        max:
+          type: number
+          format: double
+        min:
+          type: number
+          format: double
+    AnalyzedRatesResponse:
+      type: object
+      properties:
+        base:
+          type: string
+          example: "EUR"
+        rates_analyze:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/AnalyzeResponseData"
+
+    CurrencyRate:
+      type: object
+      properties:
+        currency:
+          type: string
+          description: The 3-letter ISO currency code.
+          example: "USD"
+        rate:
+          type: number
+          format: double
+          description: The exchange rate relative to the base currency.
+          example: 1.0811
+      required:
+        - currency
+        - rate
+
+    LatestRatesResponse:
+      type: object
+      properties:
+        base:
+          type: string
+          description: The base currency for the exchange rates.
+          example: "EUR"
+        rates:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurrencyRate"
+      required:
+        - base
+        - rates
+
+    HistoricalRateResponse:
+      type: object
+      properties:
+        base:
+          type: string
+          description: The base currency for the exchange rates.
+          example: "EUR"
+        date:
+          type: string
+          format: date
+          description: The specific date for the requested rates.
+          example: "2023-01-01"
+        rates:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurrencyRate"
+      required:
+        - base
+        - date
+        - rates

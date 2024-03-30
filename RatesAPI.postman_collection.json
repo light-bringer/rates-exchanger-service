@@ -1,0 +1,58 @@
+{
+  "info": {
+    "_postman_id": "0c4805f5-d035-4346-ab34-b98b3ab53401",
+    "name": "Rates API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "20108724",
+    "_collection_link": "https://lunar-moon-538178.postman.co/workspace/My-Workspace~e524b040-ffdd-42e3-8894-ac7e8a12d897/collection/20108724-0c4805f5-d035-4346-ab34-b98b3ab53401?action=share&source=collection_link&creator=20108724"
+  },
+  "item": [
+    {
+      "name": "Analyze",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/rates/analyze?range=5000",
+          "host": ["{{base_url}}"],
+          "path": ["rates", "analyze"],
+          "query": [
+            {
+              "key": "range",
+              "value": "5000"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Latest rates",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/rates/latest",
+          "host": ["{{base_url}}"],
+          "path": ["rates", "latest"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Historical rates",
+      "request": {
+        "method": "GET",
+        "header": []
+      },
+      "response": []
+    }
+  ]
+}

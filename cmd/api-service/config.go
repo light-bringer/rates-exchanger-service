@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"time"
 
@@ -15,7 +16,6 @@ const (
 	deleteInterval = 1 * time.Minute
 	ServerTimeout  = 15 * time.Second
 	deletionDays   = 30
-	configFile     = "config.yaml"
 	contextTimeout = 60 * time.Second
 )
 
@@ -89,4 +89,19 @@ func setDefaults(config *models.StartupConfig) {
 	if config.HTTP.Port == 0 {
 		config.HTTP.Port = 8080
 	}
+}
+
+// ParseFlags parses command-line flags into an AppConfig struct and returns it
+func parseFlags() (string, error) {
+	// Define flags
+
+	dbHost := flag.String("config-file", "config.yaml", "path to the configuration file")
+	// Parse the flags
+	flag.Parse()
+
+	if *dbHost == "" {
+		return "", errors.New("dbhost flag is empty")
+	}
+	return *dbHost, nil
+
 }

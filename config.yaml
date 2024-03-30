@@ -1,0 +1,23 @@
+database:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  pass: "postgres"
+  db: "postgres"
+  schema: "rate_api"
+  sslmode: "disable"
+  min_connections: 5
+  max_connections: 20
+
+cronjobs:
+  rates:
+    enabled: true
+    interval: 5m
+    sync_url: "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml"
+  cleanup:
+    enabled: true
+    interval: 24h
+    max_age: 365
+
+http:
+  port: 8080

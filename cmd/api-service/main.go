@@ -20,7 +20,12 @@ import (
 
 func main() {
 	// read the configuration file
-	config, err := readConfig(configFile)
+	configPath, paramErr := parseFlags()
+	if paramErr != nil {
+		log.Fatalf("Error parsing flags: %v", paramErr)
+	}
+
+	config, err := readConfig(configPath)
 	if err != nil {
 		log.Fatalf("Error reading the configuration file: %v", err)
 	}

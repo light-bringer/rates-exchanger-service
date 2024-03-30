@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"testing"
 	"time"
@@ -148,4 +149,55 @@ func TestSetDefaults(t *testing.T) {
 	assert.Equal(t, deleteInterval, config.CronJobs.Cleanup.DeletionInterval)
 	assert.Equal(t, deletionDays, config.CronJobs.Cleanup.MaxAge)
 	assert.Equal(t, 8080, config.HTTP.Port)
+}
+
+func TestParseFlags(t *testing.T) {
+	// Save current os.Args
+	originalArgs := os.Args
+	defer func() { os.Args = originalArgs }() // Restore original args after this test
+
+	testCases := []struct {
+		name          string
+		inputArgs     []string
+		expectedError bool
+		expectedValue string
+	}{
+		{
+			name:          "Default Config File",
+			inputArgs:     []string{"cmd"},
+			expectedError: false,
+			expectedValue: "config.yaml",
+		},
+		{
+			name:          "Custom Config File",
+			inputArgs:     []string{"cmd", "-config-file=config-test.yaml"},
+			expectedError: false,
+			expectedValue: "config-test.yaml",
+		},
+		{
+			name:          "Empty Config File Flag",
+			inputArgs:     []string{"cmd", "-config-file="},
+			expectedError: true,
+			expectedValue: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup
+			os.Args = tc.inputArgs
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError) // Reset flags
+
+			// Execute
+			value, err := parseFlags()
+
+			// Verify
+			if tc.expectedError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err, "parseFlags should not return an error for: %s", tc.inputArgs)
+				assert.Equal(t, tc.expectedValue, value, "expected value to match for: %s", tc.inputArgs)
+			}
+		})
+	}
 }
